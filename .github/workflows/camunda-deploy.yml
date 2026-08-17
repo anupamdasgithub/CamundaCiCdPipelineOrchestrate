@@ -1,0 +1,130 @@
+name: Camunda deploy
+
+# Mirrors solutions/ci-cd/gitlab-pipeline/.gitlab-ci.yml from camunda-8-tutorials.
+#
+#   push to main        -> deploy to dev   (the merged PR triggers this)
+#   Run workflow (UI)   -> deploy to the environment you pick
+#
+# "Run workflow" is the GitHub equivalent of GitLab's
+# "Build > Pipelines > Run pipeline" with an ENVIRONMENT variable.
+#
+# The runner must be able to reach the Camunda stack. For a local
+# self-managed stack on your laptop that means a SELF-HOSTED runner —
+# github-hosted runners cannot see localhost:26500 or localhost:8086.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**.bpmn'
+      - '**.dmn'
+      - '**.form'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'stage'
+        type: choice
+        options: [dev, stage, prod]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    environment: ${{ inputs.environment || 'dev' }}
+
+    env:
+      TARGET_ENV: ${{ inputs.environment || 'dev' }}
+      ZEEBE_ADDRESS: ${{ vars.ZEEBE_ADDRESS }}
+      ZEEBE_CLIENT_ID: ${{ secrets.ZEEBE_CLIENT_ID }}
+      ZEEBE_CLIENT_SECRET: ${{ secrets.ZEEBE_CLIENT_SECRET }}
+      ZEEBE_AUTHORIZATION_SERVER_URL: ${{ vars.ZEEBE_AUTHORIZATION_SERVER_URL }}
+      ZEEBE_TOKEN_AUDIENCE: ${{ vars.ZEEBE_TOKEN_AUDIENCE }}
+      WEBHOOK_URL: ${{ vars.WEB_MODELER_WEBHOOK_URL }}
+      WEBHOOK_SECRET: ${{ secrets.WEB_MODELER_WEBHOOK_SECRET }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # full history: we diff against a previous commit
+
+      # ---------------------------------------------------------------
+      # Which deployable files changed?
+      #   push     -> diff the pushed range
+      #   dispatch -> diff against the last successful deployment of this
+      #               environment, falling back to the first commit
+      # ---------------------------------------------------------------
+      - name: Determine changed files
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            # all-zeroes means a new branch; fall back to the first commit
+            if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              BEFORE=$(git rev-list --max-parents=0 HEAD | tail -1)
+            fi
+          else
+            BEFORE=$(gh api "repos/${{ github.repository }}/deployments?environment=${TARGET_ENV}" \
+                      --jq 'map(select(.sha != null)) | .[0].sha // empty' 2>/dev/null || true)
+            [ -z "$BEFORE" ] && BEFORE=$(git rev-list --max-parents=0 HEAD | tail -1)
+          fi
+
+          echo "Comparing $BEFORE..${{ github.sha }}"
+          FILES=$(git diff --name-only --diff-filter=AM "$BEFORE" "${{ github.sha }}" \
+                  | grep -E '\.(bpmn|dmn|form)$' || true)
+
+          if [ -z "$FILES" ]; then
+            echo "No deployable changes found."
+            echo "files=" >> "$GITHUB_OUTPUT"
+          else
+            echo "Found:"; echo "$FILES"
+            echo "files<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$FILES"     >> "$GITHUB_OUTPUT"
+            echo "EOF"        >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Install zbctl
+        if: steps.changed.outputs.files != ''
+        run: npm install --global --silent zbctl
+
+      # ---------------------------------------------------------------
+      # Deploy, then always report the outcome back to the blueprint.
+      # deployedFolder is the first path segment, matching the GitLab job
+      # and the process condition
+      #   <env>DeploymentWebhookPayload.deployedFolder = folder.metadata.name
+      # ---------------------------------------------------------------
+      - name: Deploy to Camunda and notify the pipeline
+        if: steps.changed.outputs.files != ''
+        shell: bash
+        run: |
+          set -uo pipefail
+          mapfile -t FILES <<< "${{ steps.changed.outputs.files }}"
+          echo "Deploying ${FILES[*]}"
+
+          if OUT=$(zbctl --insecure deploy "${FILES[@]}" 2>&1); then
+            STATUS=success
+            echo "Deployed: $OUT"
+          else
+            STATUS=failure
+            echo "::error::Deployment failed: $OUT"
+          fi
+
+          FOLDER=$(dirname "${FILES[0]}")
+          [ "$FOLDER" = "." ] && FOLDER=$(basename "${FILES[0]}")
+
+          PAYLOAD=$(jq --null-input --compact-output \
+            --arg folder "$FOLDER" --arg env "$TARGET_ENV" --arg status "$STATUS" \
+            '{deployedFolder: $folder, environment: $env, status: $status}')
+
+          echo "Notifying $WEBHOOK_URL with $PAYLOAD"
+          curl --fail-with-body --silent --show-error \
+               --header 'Content-Type: application/json' \
+               --header "x-camunda-webhook-token: ${WEBHOOK_SECRET}" \
+               --data "$PAYLOAD" "$WEBHOOK_URL"
+
+          [ "$STATUS" = "failure" ] && exit 1 || exit 0
