@@ -1,0 +1,102 @@
+{
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.8.0",
+  "exporter": {
+    "name": "Camunda Web Modeler",
+    "version": "87181d3"
+  },
+  "schemaVersion": 19,
+  "id": "CICDPipelineStart",
+  "type": "default",
+  "components": [
+    {
+      "text": "Start the GitHub CI/CD pipeline by filling out this form.\nAll files in the **root** of the given Web Modeler folder (not in subfolders) are pushed to the target GitHub repository on a new branch, and a pull request is opened against the base branch.",
+      "type": "text",
+      "layout": {
+        "row": "Row_intro",
+        "columns": null
+      },
+      "id": "githubStartFormIntroduction"
+    },
+    {
+      "type": "separator",
+      "layout": {
+        "row": "Row_separator",
+        "columns": null
+      },
+      "id": "githubStartFormSeparator"
+    },
+    {
+      "label": "Folder ID",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_folderId",
+        "columns": null
+      },
+      "id": "inputFolderId",
+      "key": "folderId",
+      "description": "Web Modeler ID of the folder to run the CI/CD pipeline for. Copy it from the folder URL in Web Modeler.",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "GitHub owner",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_repo",
+        "columns": 8
+      },
+      "id": "fieldGithubOwner",
+      "key": "githubOwner",
+      "description": "User or organisation, e.g. anupamdasgithub",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "GitHub repository",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_repo",
+        "columns": 8
+      },
+      "id": "fieldGithubRepo",
+      "key": "githubRepo",
+      "description": "Repository name only, without owner",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "Target base branch",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_repo",
+        "columns": 8
+      },
+      "id": "fieldBaseBranch",
+      "key": "baseBranch",
+      "defaultValue": "main",
+      "description": "Branch the pull request is opened against",
+      "validate": {
+        "required": true
+      }
+    },
+    {
+      "label": "GitHub API base URL",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_apiBase",
+        "columns": null
+      },
+      "id": "fieldGithubApiBaseUrl",
+      "key": "githubApiBaseUrl",
+      "defaultValue": "https://api.github.com",
+      "description": "For GitHub Enterprise Server use https://<host>/api/v3",
+      "validate": {
+        "required": true
+      }
+    }
+  ]
+}
