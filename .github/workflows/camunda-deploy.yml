@@ -103,7 +103,11 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          mapfile -t FILES <<< "${{ steps.changed.outputs.files }}"
+          # macOS ships bash 3.2, which has no mapfile builtin
+          FILES=()
+          while IFS= read -r line; do
+            [ -n "$line" ] && FILES+=("$line")
+          done <<< "${{ steps.changed.outputs.files }}"
           echo "Deploying ${FILES[*]}"
 
           if OUT=$(zbctl --insecure deploy "${FILES[@]}" 2>&1); then
