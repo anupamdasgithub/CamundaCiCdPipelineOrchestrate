@@ -293,7 +293,6 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
           <bpmn:outgoing>Flow_1jonoiv</bpmn:outgoing>
         </bpmn:serviceTask>
         <bpmn:task id="getLatestMilestone" name="Get latest milestone">
-          
           <bpmn:incoming>Flow_0y214bj</bpmn:incoming>
           <bpmn:outgoing>Flow_0mnyxys</bpmn:outgoing>
         </bpmn:task>
@@ -303,7 +302,6 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
           <bpmn:outgoing>Flow_12k5ck5</bpmn:outgoing>
         </bpmn:exclusiveGateway>
         <bpmn:task id="getMilestoneComparisonLink" name="Get milestone comparison link">
-          
           <bpmn:incoming>Flow_0zp499b</bpmn:incoming>
           <bpmn:outgoing>Flow_1vv9nsa</bpmn:outgoing>
         </bpmn:task>
@@ -339,7 +337,6 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
         </bpmn:endEvent>
         <bpmn:sequenceFlow id="Flow_0mnyxys" sourceRef="getLatestMilestone" targetRef="splitHasMilestone" />
         <bpmn:task id="createMilestone" name="Create milestone">
-          
           <bpmn:incoming>Flow_0t26nvw</bpmn:incoming>
           <bpmn:outgoing>Flow_0qwhjkc</bpmn:outgoing>
         </bpmn:task>
@@ -552,23 +549,17 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
       </bpmn:exclusiveGateway>
       <bpmn:sequenceFlow id="Flow_1nkwpv4" sourceRef="joinCheckProdDeployment" targetRef="prodDeployment" />
       <bpmn:task id="createMilestoneForDevDeployment" name="Create Web Modeler milestone (dev)">
-        
         <bpmn:incoming>Flow_07jvmtr</bpmn:incoming>
         <bpmn:outgoing>Flow_00xavty</bpmn:outgoing>
-        
       </bpmn:task>
       <bpmn:task id="createMilestoneForStageDeployment" name="Create Web Modeler milestone (stage)">
-        
         <bpmn:incoming>Flow_1eg56os</bpmn:incoming>
         <bpmn:outgoing>Flow_1gxd4to</bpmn:outgoing>
-        
       </bpmn:task>
       <bpmn:sequenceFlow id="Flow_1gxd4to" sourceRef="createMilestoneForStageDeployment" targetRef="splitAdditionalTasks" />
       <bpmn:task id="createMilestoneForProdDeployment" name="Create Web Modeler milestone (production)">
-        
         <bpmn:incoming>Flow_16kotpf</bpmn:incoming>
         <bpmn:outgoing>Flow_15e4m4s</bpmn:outgoing>
-        
       </bpmn:task>
       <bpmn:sequenceFlow id="Flow_15e4m4s" sourceRef="createMilestoneForProdDeployment" targetRef="deployEnd" />
       <bpmn:group id="Group_0gjl7n4" categoryValueRef="CategoryValue_0sd9kfi" />
@@ -771,8 +762,12 @@ https://docs.camunda.io/docs/next/components/modeler/web-modeler/git-sync/</bpmn
           <dc:Bounds x="1322" y="185" width="67" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0q60d74_di" bpmnElement="createBranch">
+        <dc:Bounds x="440" y="120" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="getBaseBranchSha_di" bpmnElement="getBaseBranchSha">
-        <dc:Bounds x="280" y="220" width="100" height="80" />
+        <dc:Bounds x="270" y="120" width="100" height="80" />
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_0n2zuzn_di" bpmnElement="checkFileStatus" isExpanded="true">
         <dc:Bounds x="580" y="80" width="570" height="280" />
@@ -837,10 +832,6 @@ https://docs.camunda.io/docs/next/components/modeler/web-modeler/git-sync/</bpmn
         <di:waypoint x="1010" y="280" />
         <di:waypoint x="1010" y="185" />
       </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="Activity_0q60d74_di" bpmnElement="createBranch">
-        <dc:Bounds x="440" y="120" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_1vibowb" bpmnElement="openMergeRequest">
         <dc:Bounds x="1190" y="120" width="100" height="80" />
         <bpmndi:BPMNLabel />
@@ -851,18 +842,14 @@ https://docs.camunda.io/docs/next/components/modeler/web-modeler/git-sync/</bpmn
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1p2kaz7_di" bpmnElement="Flow_1p2kaz7">
         <di:waypoint x="208" y="160" />
-        <di:waypoint x="244" y="160" />
-        <di:waypoint x="244" y="260" />
-        <di:waypoint x="280" y="260" />
+        <di:waypoint x="270" y="160" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_1g3f3an_di" bpmnElement="Flow_1g3f3an">
         <di:waypoint x="1150" y="160" />
         <di:waypoint x="1190" y="160" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_toCreateBranch_di" bpmnElement="Flow_toCreateBranch">
-        <di:waypoint x="380" y="260" />
-        <di:waypoint x="410" y="260" />
-        <di:waypoint x="410" y="160" />
+        <di:waypoint x="370" y="160" />
         <di:waypoint x="440" y="160" />
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_0oj7qx9_di" bpmnElement="Flow_0oj7qx9">
