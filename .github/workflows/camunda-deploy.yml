@@ -2,8 +2,8 @@ name: Camunda deploy
 
 # Mirrors solutions/ci-cd/gitlab-pipeline/.gitlab-ci.yml from camunda-8-tutorials.
 #
-#   push to main        -> deploy to dev   (the merged PR triggers this)
-#   Run workflow (UI)   -> deploy to the environment you pick
+#   push to main        -> deploy what changed, to dev (the merged PR triggers this)
+#   Run workflow (UI)   -> promote everything currently on main to the environment you pick
 #
 # "Run workflow" is the GitHub equivalent of GitLab's
 # "Build > Pipelines > Run pipeline" with an ENVIRONMENT variable.
@@ -49,10 +49,16 @@ jobs:
           fetch-depth: 0        # full history: we diff against a previous commit
 
       # ---------------------------------------------------------------
-      # Which deployable files changed?
-      #   push     -> diff the pushed range
-      #   dispatch -> diff against the last successful deployment of this
-      #               environment, falling back to the first commit
+      # Which deployable files?
+      #
+      #   push     -> only what changed in the pushed range. This is the
+      #               dev deployment that follows a merged PR.
+      #
+      #   dispatch -> everything currently on main. A promotion to stage
+      #               or prod deploys the artifact that dev already
+      #               deployed, so there is no delta to find — diffing
+      #               against the previous deployment would always come
+      #               back empty and silently skip the deploy.
       # ---------------------------------------------------------------
       - name: Determine changed files
         id: changed
@@ -67,9 +73,9 @@ jobs:
               BEFORE=$(git rev-list --max-parents=0 HEAD | tail -1)
             fi
           else
-            BEFORE=$(gh api "repos/${{ github.repository }}/deployments?environment=${TARGET_ENV}" \
-                      --jq 'map(select(.sha != null)) | .[0].sha // empty' 2>/dev/null || true)
-            [ -z "$BEFORE" ] && BEFORE=$(git rev-list --max-parents=0 HEAD | tail -1)
+            # manual promotion: diff from the root commit so every
+            # deployable file currently on main is included
+            BEFORE=$(git rev-list --max-parents=0 HEAD | tail -1)
           fi
 
           echo "Comparing $BEFORE..${{ github.sha }}"
