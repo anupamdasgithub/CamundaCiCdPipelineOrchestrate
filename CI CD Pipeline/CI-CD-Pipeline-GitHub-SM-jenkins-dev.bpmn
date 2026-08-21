@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="cicdBlueprintDefinitionsSM" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="87181d3" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0" camunda:diagramRelationId="c1103ead-75a7-4c07-9ae3-115d8d7a645c">
-  <bpmn:process id="cicdGithubBlueprintSM" name="CI/CD Blueprint: GitHub (Self-Managed)" isExecutable="true">
+  <bpmn:process id="cicdGithubJenkinsBlueprintSM" name="CI/CD Blueprint: GitHub (Self-Managed)" isExecutable="true">
     <bpmn:documentation>A customizable process development lifecycle that begins when Web Modeler changes are complete and ends when the process and all other dependencies in the Web Modeler folder are released to production.
 
 For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/integrate-web-modeler-in-ci-cd/</bpmn:documentation>
@@ -11,6 +11,8 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
       <bpmn:extensionElements>
         <zeebe:ioMapping>
           <zeebe:output source="=&#34;http://web-modeler-restapi:8081&#34;" target="modelerBaseUrl" />
+          <zeebe:output source="=&#34;http://host.docker.internal:8080&#34;" target="jenkinsBaseUrl" />
+          <zeebe:output source="=&#34;camunda-deploy&#34;" target="jenkinsJob" />
           <zeebe:output source="=&#34;http://keycloak:18080/auth/realms/camunda-platform/protocol/openid-connect/token&#34;" target="modelerTokenUrl" />
         </zeebe:ioMapping>
         <zeebe:formDefinition formId="CICDPipelineStart" />
@@ -494,7 +496,7 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
       <bpmn:sequenceFlow id="Flow_1cwvepm" name="no" sourceRef="splitCheckProdDeployment" targetRef="joinCheckProdDeployment" />
       <bpmn:sequenceFlow id="Flow_0zhzv70" sourceRef="prodDeployment" targetRef="splitCheckProdDeployment" />
       <bpmn:sequenceFlow id="Flow_0ht3gql" name="error" sourceRef="splitCheckDevDeployment" targetRef="devDeploymentError">
-        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=devDeploymentWebhookPayload.deployedFolder = folder.metadata.name and devDeploymentWebhookPayload.status = "failure"</bpmn:conditionExpression>
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=devJenkinsBuild.status &gt;= 400</bpmn:conditionExpression>
       </bpmn:sequenceFlow>
       <bpmn:sequenceFlow id="Flow_1eg56os" name="yes" sourceRef="splitCheckStageDeployment" targetRef="createMilestoneForStageDeployment">
         <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=stageDeploymentWebhookPayload.deployedFolder = folder.metadata.name and stageDeploymentWebhookPayload.status = "success"</bpmn:conditionExpression>
@@ -510,7 +512,7 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
       </bpmn:sequenceFlow>
       <bpmn:sequenceFlow id="Flow_00xavty" sourceRef="createMilestoneForDevDeployment" targetRef="manualQaTest" />
       <bpmn:sequenceFlow id="Flow_07jvmtr" name="yes" sourceRef="splitCheckDevDeployment" targetRef="createMilestoneForDevDeployment">
-        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=devDeploymentWebhookPayload.deployedFolder = folder.metadata.name and devDeploymentWebhookPayload.status = "success"</bpmn:conditionExpression>
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=devJenkinsBuild.status = 201</bpmn:conditionExpression>
       </bpmn:sequenceFlow>
       <bpmn:exclusiveGateway id="joinCheckDevDeployment">
         <bpmn:incoming>Flow_0yjny1x</bpmn:incoming>
@@ -545,9 +547,21 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
       </bpmn:task>
       <bpmn:sequenceFlow id="Flow_15e4m4s" sourceRef="createMilestoneForProdDeployment" targetRef="deployEnd" />
       <bpmn:sequenceFlow id="Flow_0ly1pmk" sourceRef="Activity_0hgulym" targetRef="splitCheckDevDeployment" />
-      <bpmn:serviceTask id="Activity_0hgulym">
+      <bpmn:serviceTask id="Activity_0hgulym" name="Trigger Jenkins dev build">
         <bpmn:extensionElements>
-          <zeebe:taskDefinition type="io.camunda:http-json:1" />
+          <zeebe:taskDefinition type="io.camunda:http-json:1" retries="3" />
+          <zeebe:ioMapping>
+            <zeebe:input source="basic" target="authentication.type" />
+            <zeebe:input source="{{ secrets.JENKINS_USER }}" target="authentication.username" />
+            <zeebe:input source="{{ secrets.JENKINS_TOKEN }}" target="authentication.password" />
+            <zeebe:input source="POST" target="method" />
+            <zeebe:input source="=jenkinsBaseUrl + &#34;/job/&#34; + jenkinsJob + &#34;/buildWithParameters&#34;" target="url" />
+            <zeebe:input source="={&#34;ENVIRONMENT&#34;: &#34;dev&#34;, &#34;FOLDER&#34;: folder.metadata.name, &#34;CORRELATION_TOKEN&#34;: string(createdMergeRequest.number)}" target="queryParameters" />
+            <zeebe:input source="20" target="connectionTimeoutInSeconds" />
+          </zeebe:ioMapping>
+          <zeebe:taskHeaders>
+            <zeebe:header key="resultExpression" value="={devJenkinsBuild: {status: response.status}}" />
+          </zeebe:taskHeaders>
         </bpmn:extensionElements>
         <bpmn:incoming>Flow_18ymcs4</bpmn:incoming>
         <bpmn:outgoing>Flow_0ly1pmk</bpmn:outgoing>
@@ -628,7 +642,7 @@ https://docs.camunda.io/docs/next/components/modeler/web-modeler/git-sync/</bpmn
     </bpmn:extensionElements>
   </bpmn:message>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="cicdGithubBlueprintSM">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="cicdGithubJenkinsBlueprintSM">
       <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="startCicd">
         <dc:Bounds x="172" y="332" width="36" height="36" />
         <bpmndi:BPMNLabel>
