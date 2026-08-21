@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:modeler="http://camunda.org/schema/modeler/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" id="cicdBlueprintDefinitionsSM" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Web Modeler" exporterVersion="87181d3" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.8.0" camunda:diagramRelationId="c1103ead-75a7-4c07-9ae3-115d8d7a645c">
-  <bpmn:process id="cicdGithubJenkinsBlueprintSMmmmmm" name="CI/CD Blueprint: GitHub -Jenkins(Self-Managed)" isExecutable="true">
+  <bpmn:process id="cicdGithubJenkinsBlueprintSM" name="CI/CD Blueprint: GitHub -Jenkins(Self-Managed)" isExecutable="true">
     <bpmn:documentation>A customizable process development lifecycle that begins when Web Modeler changes are complete and ends when the process and all other dependencies in the Web Modeler folder are released to production.
 
 For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/integrate-web-modeler-in-ci-cd/</bpmn:documentation>
@@ -459,16 +459,16 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
         <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=devJenkinsBuild.status &gt;= 400</bpmn:conditionExpression>
       </bpmn:sequenceFlow>
       <bpmn:sequenceFlow id="Flow_1eg56os" name="yes" sourceRef="splitCheckStageDeployment" targetRef="createMilestoneForStageDeployment">
-        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=stageDeploymentWebhookPayload.deployedFolder = folder.metadata.name and stageDeploymentWebhookPayload.status = "success"</bpmn:conditionExpression>
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=stageJenkinsBuild.status = 201</bpmn:conditionExpression>
       </bpmn:sequenceFlow>
       <bpmn:sequenceFlow id="Flow_15djk0w" name="error" sourceRef="splitCheckStageDeployment" targetRef="stageDeploymentError">
-        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=stageDeploymentWebhookPayload.deployedFolder = folder.metadata.name and stageDeploymentWebhookPayload.status = "failure"</bpmn:conditionExpression>
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=stageJenkinsBuild.status &gt;= 400</bpmn:conditionExpression>
       </bpmn:sequenceFlow>
       <bpmn:sequenceFlow id="Flow_16kotpf" name="yes" sourceRef="splitCheckProdDeployment" targetRef="createMilestoneForProdDeployment">
-        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=prodDeploymentWebhookPayload.deployedFolder = folder.metadata.name and prodDeploymentWebhookPayload.status = "success"</bpmn:conditionExpression>
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=prodJenkinsBuild.status = 201</bpmn:conditionExpression>
       </bpmn:sequenceFlow>
       <bpmn:sequenceFlow id="Flow_0jdb4pa" name="error" sourceRef="splitCheckProdDeployment" targetRef="prodDeploymentError">
-        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=prodDeploymentWebhookPayload.deployedFolder = folder.metadata.name and prodDeploymentWebhookPayload.status = "failure"</bpmn:conditionExpression>
+        <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=prodJenkinsBuild.status &gt;= 400</bpmn:conditionExpression>
       </bpmn:sequenceFlow>
       <bpmn:sequenceFlow id="Flow_00xavty" sourceRef="createMilestoneForDevDeployment" targetRef="manualQaTest" />
       <bpmn:sequenceFlow id="Flow_07jvmtr" name="yes" sourceRef="splitCheckDevDeployment" targetRef="createMilestoneForDevDeployment">
@@ -526,7 +526,7 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
         <bpmn:incoming>Flow_18ymcs4</bpmn:incoming>
         <bpmn:outgoing>Flow_0ly1pmk</bpmn:outgoing>
       </bpmn:serviceTask>
-      <bpmn:serviceTask id="Activity_1rz94x8" name="Trigger Jenkins stage  build">
+      <bpmn:serviceTask id="Activity_1rz94x8" name="Trigger Jenkins stage build">
         <bpmn:extensionElements>
           <zeebe:taskDefinition type="io.camunda:http-json:1" retries="3" />
           <zeebe:ioMapping>
@@ -539,14 +539,14 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
             <zeebe:input source="20" target="connectionTimeoutInSeconds" />
           </zeebe:ioMapping>
           <zeebe:taskHeaders>
-            <zeebe:header key="resultExpression" value="={devJenkinsBuild: {status: response.status}}" />
+            <zeebe:header key="resultExpression" value="={stageJenkinsBuild: {status: response.status}}" />
           </zeebe:taskHeaders>
         </bpmn:extensionElements>
         <bpmn:incoming>Flow_1poyrpq</bpmn:incoming>
         <bpmn:outgoing>Flow_1ow56ug</bpmn:outgoing>
       </bpmn:serviceTask>
       <bpmn:sequenceFlow id="Flow_1ow56ug" sourceRef="Activity_1rz94x8" targetRef="splitCheckStageDeployment" />
-      <bpmn:serviceTask id="Activity_1obuczz" name="Trigger Jenkins prod  build">
+      <bpmn:serviceTask id="Activity_1obuczz" name="Trigger Jenkins prod build">
         <bpmn:extensionElements>
           <zeebe:taskDefinition type="io.camunda:http-json:1" retries="3" />
           <zeebe:ioMapping>
@@ -559,7 +559,7 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
             <zeebe:input source="20" target="connectionTimeoutInSeconds" />
           </zeebe:ioMapping>
           <zeebe:taskHeaders>
-            <zeebe:header key="resultExpression" value="={devJenkinsBuild: {status: response.status}}" />
+            <zeebe:header key="resultExpression" value="={prodJenkinsBuild: {status: response.status}}" />
           </zeebe:taskHeaders>
         </bpmn:extensionElements>
         <bpmn:incoming>Flow_1nkwpv4</bpmn:incoming>
@@ -642,7 +642,7 @@ https://docs.camunda.io/docs/next/components/modeler/web-modeler/git-sync/</bpmn
     </bpmn:extensionElements>
   </bpmn:message>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="cicdGithubJenkinsBlueprintSMmmmmm">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="cicdGithubJenkinsBlueprintSM">
       <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="startCicd">
         <dc:Bounds x="172" y="332" width="36" height="36" />
         <bpmndi:BPMNLabel>
@@ -1084,12 +1084,6 @@ https://docs.camunda.io/docs/next/components/modeler/web-modeler/git-sync/</bpmn
           <dc:Bounds x="935" y="136" width="70" height="27" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_1yrmvrj" bpmnElement="splitCheckProdDeployment" isMarkerVisible="true">
-        <dc:Bounds x="1743" y="165" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="1732" y="136" width="73" height="27" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Event_0eas0ui_di" bpmnElement="devDeploymentError">
         <dc:Bounds x="462" y="272" width="36" height="36" />
         <bpmndi:BPMNLabel>
@@ -1125,10 +1119,6 @@ https://docs.camunda.io/docs/next/components/modeler/web-modeler/git-sync/</bpmn
         <dc:Bounds x="1050" y="150" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BPMNShape_11u9lgp" bpmnElement="createMilestoneForProdDeployment">
-        <dc:Bounds x="1835" y="150" width="100" height="80" />
-        <bpmndi:BPMNLabel />
-      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_1a1n0nb_di" bpmnElement="Activity_0hgulym">
         <dc:Bounds x="266" y="150" width="100" height="80" />
       </bpmndi:BPMNShape>
@@ -1136,10 +1126,28 @@ https://docs.camunda.io/docs/next/components/modeler/web-modeler/git-sync/</bpmn
         <dc:Bounds x="840" y="150" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_1yrmvrj" bpmnElement="splitCheckProdDeployment" isMarkerVisible="true">
+        <dc:Bounds x="1743" y="165" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1732" y="136" width="73" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="BPMNShape_0q5xju7" bpmnElement="Activity_1obuczz">
         <dc:Bounds x="1622" y="150" width="100" height="80" />
         <bpmndi:BPMNLabel />
       </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BPMNShape_11u9lgp" bpmnElement="createMilestoneForProdDeployment">
+        <dc:Bounds x="1835" y="150" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1ow56ug_di" bpmnElement="Flow_1ow56ug">
+        <di:waypoint x="940" y="190" />
+        <di:waypoint x="945" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0eg15fb_di" bpmnElement="Flow_0eg15fb">
+        <di:waypoint x="1722" y="190" />
+        <di:waypoint x="1743" y="190" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="Group_0gjl7n4_di" bpmnElement="Group_0gjl7n4">
         <dc:Bounds x="180" y="80" width="550" height="310" />
         <bpmndi:BPMNLabel>
@@ -1293,14 +1301,6 @@ https://docs.camunda.io/docs/next/components/modeler/web-modeler/git-sync/</bpmn
       <bpmndi:BPMNEdge id="Flow_0ly1pmk_di" bpmnElement="Flow_0ly1pmk">
         <di:waypoint x="366" y="190" />
         <di:waypoint x="379" y="190" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_1ow56ug_di" bpmnElement="Flow_1ow56ug">
-        <di:waypoint x="940" y="190" />
-        <di:waypoint x="945" y="190" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_0eg15fb_di" bpmnElement="Flow_0eg15fb">
-        <di:waypoint x="1722" y="190" />
-        <di:waypoint x="1743" y="190" />
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
