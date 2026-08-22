@@ -579,11 +579,12 @@ For more information, read https://docs.camunda.io/docs/guides/devops-lifecycle/
         <zeebe:properties>
           <zeebe:property name="inbound.type" value="io.camunda:webhook:1" />
           <zeebe:property name="inbound.method" value="post" />
-          <zeebe:property name="inbound.context" value="checkMergeRequestStatusGH" />
-          <zeebe:property name="inbound.shouldValidateHmac" value="disabled" />
-          <zeebe:property name="inbound.auth.type" value="APIKEY" />
-          <zeebe:property name="inbound.auth.apiKey" value="{{ secrets.GITHUB_WEBHOOK_SECRET }}" />
-          <zeebe:property name="inbound.auth.apiKeyLocator" value="=get value(request.headers, &#34;x-camunda-webhook-token&#34;)" />
+          <zeebe:property name="inbound.context" value="checkMergeRequestStatusGH2" />
+          <zeebe:property name="inbound.shouldValidateHmac" value="enabled" />
+          <zeebe:property name="inbound.hmacSecret" value="{{ secrets.GITHUB_WEBHOOK_SECRET }}" />
+          <zeebe:property name="inbound.hmacHeader" value="x-hub-signature-256" />
+          <zeebe:property name="inbound.hmacAlgorithm" value="sha_256" />
+          <zeebe:property name="inbound.auth.type" value="NONE" />
           <zeebe:property name="correlationKeyExpression" value="=request.body.pull_request.id" />
           <zeebe:property name="resultVariable" value="" />
           <zeebe:property name="resultExpression" value="={mergeRequestWebhookPayload: request.body}" />
