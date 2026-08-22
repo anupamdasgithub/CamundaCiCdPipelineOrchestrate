@@ -131,6 +131,12 @@ jobs:
             --arg folder "$FOLDER" --arg env "$TARGET_ENV" --arg status "$STATUS" \
             '{deployedFolder: $folder, environment: $env, status: $status}')
 
+          # WEB_MODELER_WEBHOOK_URL points at the dev context. Swap the last
+          # path segment for the target environment's context so a stage or
+          # prod promotion is not POSTed to the dev webhook (which would
+          # return 200 and correlate with nothing).
+          WEBHOOK_URL="${WEBHOOK_URL%/*}/${TARGET_ENV}DeploymentWebhookGH"
+
           echo "Notifying $WEBHOOK_URL with $PAYLOAD"
           curl --fail-with-body --silent --show-error \
                --header 'Content-Type: application/json' \
